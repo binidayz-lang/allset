@@ -21,13 +21,7 @@ button{cursor:pointer}
 <script type="text/babel">
 const {useState,useRef}=React;
 const COLOR_PRESETS=[{name:"로즈",v:"#C4375A"},{name:"네이비",v:"#1E4D8C"},{name:"그린",v:"#2D7A4F"},{name:"버건디",v:"#7D1935"},{name:"퍼플",v:"#6B3FA0"},{name:"틸",v:"#0B7A7E"},{name:"오렌지",v:"#C24A0C"},{name:"다크",v:"#2A2A2A"}];
-const INIT_PRODUCTS=[
-  {id:"P001",brand:"해담은",name:"즙슐랭 사과",onlinePrice:29000,groupBuyPrice:23000,wholesalePrice:17900,sellerMarginRate:75,note:"세트"},
-  {id:"P002",brand:"해담은",name:"즙슐랭 당근사과",onlinePrice:31000,groupBuyPrice:25000,wholesalePrice:19500,sellerMarginRate:75,note:"세트"},
-  {id:"P003",brand:"해담은",name:"즙슐랭 배도라지",onlinePrice:32000,groupBuyPrice:26000,wholesalePrice:20200,sellerMarginRate:75,note:"세트"},
-  {id:"P004",brand:"해담은",name:"즙슐랭 CCA",onlinePrice:33000,groupBuyPrice:27000,wholesalePrice:21000,sellerMarginRate:75,note:"세트"},
-  {id:"P005",brand:"해담은",name:"즙슐랭 파인애플",onlinePrice:35000,groupBuyPrice:29000,wholesalePrice:22600,sellerMarginRate:75,note:"세트"},
-];
+const INIT_PRODUCTS=[];
 const calcM=(p)=>{const gp=+p.groupBuyPrice||0,wp=+p.wholesalePrice||0,smr=+p.sellerMarginRate||0;const total=gp-wp,totalRate=gp>0?(total/gp*100):0;const sellerAmt=Math.round(total*smr/100),myAmt=total-sellerAmt;return{total,totalRate,sellerAmt,myAmt,supplyPrice:gp-sellerAmt};};
 const fmt=(n)=>Number(n||0).toLocaleString()+"원";
 const pct=(n)=>Number(n||0).toFixed(1)+"%";
@@ -38,8 +32,8 @@ function App(){
   const [tab,setTab]=useState("master");
   const [products,setProducts]=useState(INIT_PRODUCTS);
   const [ac,setAc]=useState("#C4375A");
-  const [form,setForm]=useState({md:"메리",brand:"해담은",keyword:"즙슐랭",product:"즙슐랭",channel:"인스타그램",shipping:"3,000원 (3만원이상 무료배송)",note:"",points:["100% 국내산 과일로 맛을 낸","물 한방울도 안들어간 NFC착즙주스","무 정제수, 무 설탕, 무 색소","온 가족이 안심하고 먹을 수 있는 HACCP인증을 받은 시설에서 제품을 생산","언제 어디서나 간편하게 스파우트 파우치"]});
-  const [selIds,setSelIds]=useState(["P001","P002","P003","P004","P005","","",""]);
+  const [form,setForm]=useState({md:"",brand:"",keyword:"",product:"",channel:"",shipping:"",note:"",points:["","","","",""]});
+  const [selIds,setSelIds]=useState(["","","","","","","",""]);
   const [productImages,setProductImages]=useState([]);
   const [dmChannel,setDmChannel]=useState("insta");
   const [hookSentence,setHookSentence]=useState("");
@@ -306,6 +300,33 @@ function App(){
               💡 <b>데이터 유실 방지 안내</b> — 이 도구는 새로고침 시 입력한 내용이 초기화돼요.<br/>
               상품 등록 후 <b>📥 엑셀 저장</b> 버튼으로 저장해두고, 다음에 열 때 <b>📤 엑셀 불러오기</b>로 다시 불러오세요!
             </div>
+            <div style={{padding:"10px 16px",background:"#FFFBF0",borderLeft:"3px solid #FCD34D",borderBottom:"1px solid #E6DED6",fontSize:11,color:"#92400E",lineHeight:1.8}}>
+              📝 <b>입력 예시</b> — 아래처럼 상품을 등록하면 돼요!
+              <div style={{marginTop:8,overflowX:"auto"}}>
+                <table style={{borderCollapse:"collapse",fontSize:10,minWidth:700}}>
+                  <thead><tr style={{background:"#1A2940",color:"#fff"}}>
+                    {["상품ID","브랜드","상품명","온라인가","희망공구가","회사도매가","원래마진금액","셀러마진%","셀러마진금액","내마진금액","비고"].map((h,i)=>(
+                      <th key={i} style={{padding:"5px 8px",textAlign:i>2?"right":"left",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    <tr style={{background:"#FFFDE8",opacity:0.85}}>
+                      <td style={{padding:"5px 8px",color:"#C4375A",fontWeight:700}}>P001</td>
+                      <td style={{padding:"5px 8px"}}>브랜드명</td>
+                      <td style={{padding:"5px 8px"}}>상품 전체명 입력</td>
+                      <td style={{padding:"5px 8px",textAlign:"right",color:"#BBB"}}>30,000원</td>
+                      <td style={{padding:"5px 8px",textAlign:"right",color:"#C4375A",fontWeight:700}}>25,000원</td>
+                      <td style={{padding:"5px 8px",textAlign:"right"}}>18,000원</td>
+                      <td style={{padding:"5px 8px",textAlign:"right",color:"#2D7A4F",fontWeight:700}}>7,000원</td>
+                      <td style={{padding:"5px 8px",textAlign:"right"}}>75.0%</td>
+                      <td style={{padding:"5px 8px",textAlign:"right",color:"#C4375A",fontWeight:700}}>5,250원</td>
+                      <td style={{padding:"5px 8px",textAlign:"right",color:"#1A6B3A",fontWeight:700}}>1,750원</td>
+                      <td style={{padding:"5px 8px",color:"#999"}}>세트</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr style={{background:"#1A2940",color:"#fff"}}>
@@ -375,8 +396,8 @@ function App(){
             <div style={S.card}>
               <div style={S.cH()}>✏️ 기본 정보</div>
               <div style={{padding:"13px 15px"}}>
-                {[["담당 MD","md"],["브랜드명","brand"],["브랜드 키워드","keyword"],["제안 제품","product"],["제안 채널","channel"],["배송비","shipping"],["비고 (선택)","note"]].map(([lb,k])=>(
-                  <div key={k} style={{marginBottom:7}}><label style={S.lbl}>{lb}</label><input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{...S.inp,background:"#FFFDE8"}}/></div>
+                {[["담당 MD","md","예: 메리"],["브랜드명","brand","예: 해담은"],["브랜드 키워드","keyword","예: 즙슐랭"],["제안 제품","product","예: 즙슐랭 사과즙"],["제안 채널","channel","예: 인스타그램"],["배송비","shipping","예: 3,000원 (3만원이상 무료배송)"],["비고 (선택)","note","예: 단독 진행 선호"]].map(([lb,k,ph])=>(
+                  <div key={k} style={{marginBottom:7}}><label style={S.lbl}>{lb}</label><input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={ph} style={{...S.inp,background:"#FFFDE8"}}/></div>
                 ))}
               </div>
             </div>
@@ -386,7 +407,7 @@ function App(){
                 {form.points.map((pt,i)=>(
                   <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
                     <span style={{width:17,height:17,background:pt.trim()?ac:"#DDD",color:"#fff",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0}}>{i+1}</span>
-                    <input value={pt} onChange={e=>{const ps=[...form.points];ps[i]=e.target.value;setForm({...form,points:ps});}} placeholder={`포인트 ${i+1}`} style={{...S.inp,background:"#FFFDE8"}}/>
+                    <input value={pt} onChange={e=>{const ps=[...form.points];ps[i]=e.target.value;setForm({...form,points:ps});}} placeholder={["예: 100% 국내산 원료","예: 무방부제 · 무색소","예: HACCP 인증 시설","예: 간편한 스파우트 파우치","예: 냉장 배송 보장"][i]} style={{...S.inp,background:"#FFFDE8"}}/>
                   </div>
                 ))}
               </div>
