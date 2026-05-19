@@ -14,6 +14,84 @@ body{font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;background:#
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:#DDD;border-radius:3px}
 button{cursor:pointer}
+
+/* ============= 모바일 최적화 (768px 이하) ============= */
+@media (max-width: 768px) {
+  /* 1. 모든 multi-column grid를 1컬럼으로 자동 변환 */
+  div[style*="grid-template-columns"]{
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 2. 미리보기 박스(620px 고정) → 화면에 맞춤 */
+  div[style*="width: 620px"]{
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 3. 미리보기 박스 내부 패딩 줄이기 (32px 36px → 18px 16px) */
+  div[style*="padding: 32px 36px"]{
+    padding: 18px 16px !important;
+  }
+
+  /* 4. 상단 헤더 패딩 줄이기 (12px 20px → 10px 12px) */
+  div[style*="padding: 12px 20px"]{
+    padding: 10px 12px !important;
+  }
+
+  /* 5. 탭 네비 영역 - 가로 스크롤 허용 (6개 탭이 안 잘리게) */
+  div[style*="padding: 0px 18px"][style*="display: flex"]{
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    padding: 0 8px !important;
+  }
+  div[style*="padding: 0px 18px"][style*="display: flex"] button{
+    flex-shrink: 0 !important;
+    white-space: nowrap;
+  }
+
+  /* 6. 좌우 큰 padding 줄이기 (20px → 12px) */
+  div[style*="padding: 5px 20px"]{
+    padding: 5px 12px !important;
+  }
+
+  /* 7. 본문 컨테이너 padding 줄이기 */
+  div[style*="padding: 16px;"]:not([style*="grid"]):not([style*="background"]){
+    padding: 10px !important;
+  }
+
+  /* 8. 테이블 폰트 줄이고 가로 스크롤 보장 */
+  table{
+    font-size: 10.5px !important;
+  }
+  div[style*="overflow-x"]{
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 9. 컬러 프리셋 버튼 줄바꿈 유지 */
+  div[style*="flex-wrap: wrap"]{
+    justify-content: flex-start !important;
+  }
+
+  /* 10. body 폰트 사이즈 보정 */
+  body{
+    font-size: 13px;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* ============= 작은 모바일 (480px 이하) - 더 콤팩트 ============= */
+@media (max-width: 480px) {
+  div[style*="padding: 18px 16px"]{
+    padding: 14px 12px !important;
+  }
+
+  /* 헤더 로고 아이콘 약간 줄임 */
+  div[style*="width: 36px"][style*="height: 36px"][style*="border-radius: 8px"]{
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
 </style>
 </head>
 <body>
