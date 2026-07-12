@@ -78,6 +78,23 @@ button{cursor:pointer}
     font-size: 13px;
     -webkit-text-size-adjust: 100%;
   }
+
+  /* 11. 제안서 미리보기(PDF/PNG 캡처 박스)는 모바일에서도 PC와 동일한 620px 고정폭 유지
+     → 규칙 2,3보다 ID 선택자라 우선 적용됨. 좁으면 좌우 스크롤로 보게 함 */
+  #proposalScrollArea{
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #proposalPreviewOuter,
+  #proposalPreviewBox{
+    width: 620px !important;
+    max-width: 620px !important;
+    flex-shrink: 0 !important;
+  }
+  #proposalPreviewBox{
+    padding: 32px 36px !important;
+  }
 }
 
 /* ============= 작은 모바일 (480px 이하) - 더 콤팩트 ============= */
@@ -205,11 +222,11 @@ function App(){
   const copyText=(text,key)=>{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>{setCopied(p=>({...p,[key]:true}));showToast("📋 복사되었습니다!");setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);}).catch(()=>{fallbackCopy(text,key);});}else{fallbackCopy(text,key);}};
   const saveRate=(id)=>{if(editRate[id]!==undefined)setProducts(products.map(p=>p.id===id?{...p,sellerMarginRate:+editRate[id]||75}:p));setEditRate(prev=>{const n={...prev};delete n[id];return n;});};
   const loadSrc=(src,chk)=>new Promise((res,rej)=>{if(chk&&chk()){res();return;}const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
-  const handleSavePNG=async()=>{setSaving(p=>({...p,png:true}));try{await loadSrc("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>window.html2canvas);const cv=await window.html2canvas(proposalRef.current,{scale:2,backgroundColor:"#fff",useCORS:true});const a=document.createElement("a");a.download=`${form.brand}_제안서.png`;a.href=cv.toDataURL("image/png");a.click();showToast("🖼️ PNG 저장 완료!");}catch{showToast("❌ PNG 저장 실패.");}setSaving(p=>({...p,png:false}));};
+  const handleSavePNG=async()=>{setSaving(p=>({...p,png:true}));try{await loadSrc("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>window.html2canvas);const cv=await window.html2canvas(proposalRef.current,{scale:2,backgroundColor:"#fff",useCORS:true,scrollX:0,scrollY:-window.scrollY,windowWidth:document.documentElement.scrollWidth,windowHeight:document.documentElement.scrollHeight});const a=document.createElement("a");a.download=`${form.brand}_제안서.png`;a.href=cv.toDataURL("image/png");a.click();showToast("🖼️ PNG 저장 완료!");}catch{showToast("❌ PNG 저장 실패.");}setSaving(p=>({...p,png:false}));};
   const handleSavePDF=async()=>{setSaving(p=>({...p,pdf:true}));try{
     await loadSrc("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>window.html2canvas);
     await loadSrc("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>window.jspdf);
-    const cv=await window.html2canvas(proposalRef.current,{scale:2,backgroundColor:"#fff",useCORS:true});
+    const cv=await window.html2canvas(proposalRef.current,{scale:2,backgroundColor:"#fff",useCORS:true,scrollX:0,scrollY:-window.scrollY,windowWidth:document.documentElement.scrollWidth,windowHeight:document.documentElement.scrollHeight});
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
     const pw=pdf.internal.pageSize.getWidth();
@@ -514,9 +531,9 @@ function App(){
 
           <div style={{...S.card,display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{...S.cH(),borderRadius:"12px 12px 0 0"}}><span>📋 실시간 미리보기</span><span style={{fontSize:10,background:ac,color:"#fff",padding:"2px 10px",borderRadius:20}}>● LIVE</span></div>
-            <div style={{padding:16,overflowY:"auto",flex:1,background:"#E8E4DE",display:"flex",justifyContent:"center"}}>
-              <div style={{width:620,flexShrink:0}}>
-                <div ref={proposalRef} style={{width:620,padding:"32px 36px",background:"#fff",fontFamily:"system-ui,-apple-system,'Malgun Gothic',sans-serif",boxShadow:"0 8px 32px rgba(0,0,0,.15)"}}>
+            <div id="proposalScrollArea" style={{padding:16,overflowY:"auto",flex:1,background:"#E8E4DE",display:"flex",justifyContent:"center"}}>
+              <div id="proposalPreviewOuter" style={{width:620,flexShrink:0}}>
+                <div id="proposalPreviewBox" ref={proposalRef} style={{width:620,padding:"32px 36px",background:"#fff",fontFamily:"system-ui,-apple-system,'Malgun Gothic',sans-serif",boxShadow:"0 8px 32px rgba(0,0,0,.15)"}}>
                   <div style={{textAlign:"center",marginBottom:22,paddingBottom:16,borderBottom:`3px solid ${ac}`}}>
                     <div style={{fontSize:9,color:ac,fontWeight:800,letterSpacing:4,marginBottom:5}}>CELEBRITY × {form.md}</div>
                     <h1 style={{fontSize:18,fontWeight:800,color:"#1A2940",margin:0}}>{form.product} 공동구매 제안서</h1>
@@ -954,7 +971,7 @@ function App(){
           <div style={{...S.card,overflow:"hidden"}}>
             <div style={{...S.cH(),borderRadius:"12px 12px 0 0"}}>
               <span>📄 사용설명서</span>
-              <a href="https://binidayz-lang.github.io/manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
+              <a href="manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
                 style={{padding:"7px 18px",background:ac,color:"#fff",borderRadius:7,fontSize:12,fontWeight:700,textDecoration:"none",display:"inline-block"}}>
                 ⬇️ PDF 다운로드
               </a>
@@ -980,7 +997,7 @@ function App(){
                   </div>
                 ))}
               </div>
-              <a href="https://binidayz-lang.github.io/manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
+              <a href="manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
                 style={{padding:"13px 44px",background:ac,color:"#fff",borderRadius:9,fontSize:14,fontWeight:800,textDecoration:"none",display:"inline-block",marginTop:6}}>
                 ⬇️ 사용설명서 PDF 다운로드
               </a>
