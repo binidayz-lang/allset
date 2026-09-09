@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>5분자동화 올인원 ver3. | 인플즈메리</title>
+<title>5분자동화 올인원 ver4. | 인플즈메리</title>
 <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;background:#F5F3EF;font-size:13px}
@@ -114,7 +116,11 @@ button{cursor:pointer}
 <body>
 <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:#888"><div style="font-size:32px">⚙️</div><div style="font-size:14px;font-weight:600">도구 불러오는 중...</div><div style="font-size:11px">처음 열 때 5~10초 정도 걸려요</div></div></div>
 <script type="text/babel">
-const {useState,useRef}=React;
+const {useState,useRef,useEffect}=React;
+const FIREBASE_CONFIG={apiKey:"AIzaSyATt-hEuctEFZkHRD9TpxNOXdOq5FyLBb0",authDomain:"marryz-challenge.firebaseapp.com",databaseURL:"https://marryz-challenge-default-rtdb.firebaseio.com",projectId:"marryz-challenge",storageBucket:"marryz-challenge.firebasestorage.app",messagingSenderId:"157658417157",appId:"1:157658417157:web:80cf775131c2d817dcf46c"};
+let DB=null;
+try{firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.database();}catch(e){console.warn("Firebase 초기화 오류:",e);}
+const mkAutoKey=(name,pin)=>'auto_'+(name+'_'+pin).replace(/[.#$[\]/]/g,'_');
 const COLOR_PRESETS=[{name:"로즈",v:"#C4375A"},{name:"네이비",v:"#1E4D8C"},{name:"그린",v:"#2D7A4F"},{name:"버건디",v:"#7D1935"},{name:"퍼플",v:"#6B3FA0"},{name:"틸",v:"#0B7A7E"},{name:"오렌지",v:"#C24A0C"},{name:"다크",v:"#2A2A2A"}];
 const INIT_PRODUCTS=[];
 const calcM=(p)=>{const gp=+p.groupBuyPrice||0,wp=+p.wholesalePrice||0,smr=+p.sellerMarginRate||0;const total=gp-wp,totalRate=gp>0?(total/gp*100):0;const sellerAmt=Math.round(total*smr/100),myAmt=total-sellerAmt;return{total,totalRate,sellerAmt,myAmt,supplyPrice:gp-sellerAmt};};
@@ -150,7 +156,72 @@ function App(){
   const imgInputRef=useRef(null);
   const xlsxInputRef2=useRef(null);
 
+  const [authed,setAuthed]=useState(false);
+  const [authLoading,setAuthLoading]=useState(false);
+  const [authKey,setAuthKey]=useState(null);
+  const [loginName,setLoginName]=useState("");
+  const [loginPin,setLoginPin]=useState("");
+  const dataLoadedRef=useRef(false);
+
   const showToast=(m)=>{setToast(m);setTimeout(()=>setToast(""),2600);};
+
+  const applyLoadedData=(data)=>{
+    setProducts(data&&data.products?data.products:[]);
+    setSellers(data&&data.sellers?data.sellers:[]);
+  };
+
+  const doLogin=()=>{
+    const name=loginName.trim();
+    const pin=loginPin.trim();
+    if(!name){showToast("이름을 입력해주세요!");return;}
+    if(!/^\d{4}$/.test(pin)){showToast("숫자 4자리를 입력해주세요!");return;}
+    if(!DB){showToast("연결 오류. 잠시 후 다시 시도해주세요.");return;}
+    const key=mkAutoKey(name,pin);
+    setAuthLoading(true);
+    DB.ref('productMaster/'+key).once('value').then(snap=>{
+      applyLoadedData(snap.val());
+      dataLoadedRef.current=true;
+      setAuthKey(key);
+      setAuthed(true);
+      setAuthLoading(false);
+      try{localStorage.setItem('auto5_s',JSON.stringify({name,pin}));}catch(e){}
+      showToast(`👋 ${name}님, 반가워요!`);
+    }).catch(()=>{setAuthLoading(false);showToast("연결 오류가 발생했어요.");});
+  };
+
+  const doLogout=()=>{
+    try{localStorage.removeItem('auto5_s');}catch(e){}
+    dataLoadedRef.current=false;
+    setAuthed(false);setAuthKey(null);setLoginName("");setLoginPin("");
+    setProducts([]);setSellers([]);
+  };
+
+  useEffect(()=>{
+    if(!DB)return;
+    try{
+      const sess=localStorage.getItem('auto5_s');
+      if(sess){
+        const {name,pin}=JSON.parse(sess);
+        setLoginName(name);setLoginPin(pin);
+        const key=mkAutoKey(name,pin);
+        DB.ref('productMaster/'+key).once('value').then(snap=>{
+          applyLoadedData(snap.val());
+          dataLoadedRef.current=true;
+          setAuthKey(key);
+          setAuthed(true);
+        }).catch(()=>{});
+      }
+    }catch(e){}
+  },[]);
+
+  useEffect(()=>{
+    if(!authed||!authKey||!dataLoadedRef.current||!DB)return;
+    const t=setTimeout(()=>{
+      DB.ref('productMaster/'+authKey).update({name:loginName,products,sellers,lastActive:new Date().toISOString().slice(0,10)}).catch(()=>{});
+    },700);
+    return ()=>clearTimeout(t);
+  },[products,sellers]);
+
   const npC=calcM({groupBuyPrice:newP.groupBuyPrice,wholesalePrice:newP.wholesalePrice,sellerMarginRate:newP.sellerMarginRate});
   const selProds=[...selIds.map(id=>id?products.find(p=>p.id===id):null).filter(Boolean),...optProds];
   const activePoints=form.points.filter(p=>p.trim());
@@ -268,7 +339,7 @@ function App(){
       const m=calcM(p);
       return{
         "상품ID":p.id,"브랜드명":p.brand,"상품명":p.name,
-        "온라인가격":p.onlinePrice,"희망공구가":p.groupBuyPrice,"회사도매가":p.wholesalePrice,
+        "시중가":p.onlinePrice,"공구가":p.groupBuyPrice,"도매가":p.wholesalePrice,
         "원래마진금액":m.total,"원래마진율":Math.round(m.totalRate*10)/10,
         "셀러마진%":p.sellerMarginRate,"셀러마진금액":m.sellerAmt,"내마진금액":m.myAmt,
         "비고":p.note
@@ -297,9 +368,9 @@ function App(){
           id:r["상품ID"]||`P${String(i+1).padStart(3,"0")}`,
           brand:r["브랜드명"]||"",
           name:r["상품명"]||"",
-          onlinePrice:+r["온라인가격"]||0,
-          groupBuyPrice:+r["희망공구가"]||0,
-          wholesalePrice:+r["회사도매가"]||0,
+          onlinePrice:+r["시중가"]||0,
+          groupBuyPrice:+r["공구가"]||0,
+          wholesalePrice:+r["도매가"]||0,
           sellerMarginRate:+r["셀러마진%"]||75,
           note:r["비고"]||""
         }));
@@ -330,15 +401,44 @@ function App(){
   const acCSS=`input:focus,select:focus,textarea:focus{border-color:${ac}!important;box-shadow:0 0 0 2px ${ac}22} ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#DDD;border-radius:3px}`;
   const CH_LABELS={insta:"📸 인스타그램 DM",kakao:"💛 카카오톡",email:"📧 이메일"};
 
+  if(!authed){
+    return(
+      <div style={{minHeight:"100vh",background:"#F5F3EF",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <div style={{position:"fixed",bottom:22,left:"50%",transform:"translateX(-50%)",background:"#1A2940",color:"#fff",padding:"10px 22px",borderRadius:40,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.3)",zIndex:9999,opacity:toast?1:0,transition:"opacity .3s",pointerEvents:"none",whiteSpace:"nowrap"}}>{toast}</div>
+        <div style={{background:"#fff",borderRadius:14,padding:"28px 24px",width:"100%",maxWidth:340,boxShadow:"0 8px 30px rgba(0,0,0,.08)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+            <div style={{width:36,height:36,background:"#C4375A",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,color:"#fff",flexShrink:0}}>5분</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:15}}>5분자동화 올인원</div>
+              <div style={{fontSize:11,color:"#999"}}>인플즈메리</div>
+            </div>
+          </div>
+          <div style={{fontSize:12,color:"#888",marginBottom:16,lineHeight:1.7}}>이름과 비밀번호로 들어오면<br/>상품마스터・셀러 관리 데이터가<br/>기기와 상관없이 이어져요.</div>
+          <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:5}}>이름</label>
+          <input value={loginName} onChange={e=>setLoginName(e.target.value)} placeholder="이름 입력" maxLength={10} style={{width:"100%",border:"1.5px solid #E6DED6",borderRadius:8,padding:"9px 12px",fontSize:14,marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+          <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:5}}>숫자 4자리 비밀번호</label>
+          <input value={loginPin} onChange={e=>setLoginPin(e.target.value)} type="password" inputMode="numeric" maxLength={4} placeholder="꼭 기억해두세요" onKeyDown={e=>{if(e.key==="Enter")doLogin();}} style={{width:"100%",border:"1.5px solid #E6DED6",borderRadius:8,padding:"9px 12px",fontSize:14,marginBottom:16,fontFamily:"inherit",boxSizing:"border-box"}}/>
+          <button onClick={doLogin} disabled={authLoading} style={{width:"100%",background:"#1A2940",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{authLoading?"불러오는 중...":"시작하기 →"}</button>
+          <div style={{fontSize:10.5,color:"#BBB",marginTop:12,textAlign:"center",lineHeight:1.7}}>폰을 바꿔도 같은 이름+비밀번호면 그대로 이어져요</div>
+        </div>
+      </div>
+    );
+  }
+
   return(
     <div style={{minHeight:"100vh",background:"#F5F3EF"}}>
       <style>{acCSS}</style>
       <div style={{position:"fixed",bottom:22,left:"50%",transform:"translateX(-50%)",background:"#1A2940",color:"#fff",padding:"10px 22px",borderRadius:40,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.3)",zIndex:9999,opacity:toast?1:0,transition:"opacity .3s",pointerEvents:"none",whiteSpace:"nowrap"}}>{toast}</div>
       <div style={{background:"#1A2940",color:"#fff",padding:"12px 20px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 10px rgba(0,0,0,.2)"}}>
         <div style={{width:36,height:36,background:ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,flexShrink:0,transition:"background .3s",textAlign:"center",lineHeight:1.2}}>5분</div>
-        <div>
-          <div style={{fontWeight:800,fontSize:15,letterSpacing:-.5}}>5분자동화 올인원 ver3.</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:15,letterSpacing:-.5}}>5분자동화 올인원 ver4.</div>
           <div style={{fontSize:11,opacity:.6,marginTop:1}}>인플즈메리 강사 수강생 전용</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+          <button onClick={()=>setTab("manual")} style={{background:tab==="manual"?ac:"rgba(255,255,255,.12)",border:"none",color:"#fff",borderRadius:6,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>❓ 가이드</button>
+          <span style={{fontSize:11,opacity:.75}}>{loginName}님</span>
+          <button onClick={doLogout} style={{background:"rgba(255,255,255,.12)",border:"none",color:"#fff",borderRadius:6,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>로그아웃</button>
         </div>
       </div>
       <div style={{background:"#fff",borderBottom:"1px solid #E6DED6",padding:"0 18px",display:"flex"}}>
@@ -367,9 +467,9 @@ function App(){
                 <div><label style={S.lbl}>상품명 ✱</label><input value={newP.name} onChange={e=>setNewP({...newP,name:e.target.value})} placeholder="상품 전체명 입력" style={S.inp}/></div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 130px 90px",gap:9,marginBottom:9}}>
-                <div><label style={S.lbl}>온라인 가격</label><input type="number" value={newP.onlinePrice} onChange={e=>setNewP({...newP,onlinePrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
-                <div><label style={S.lbl}>희망 공구가</label><input type="number" value={newP.groupBuyPrice} onChange={e=>setNewP({...newP,groupBuyPrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
-                <div><label style={S.lbl}>회사 도매가</label><input type="number" value={newP.wholesalePrice} onChange={e=>setNewP({...newP,wholesalePrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
+                <div><label style={S.lbl}>시중가</label><input type="number" value={newP.onlinePrice} onChange={e=>setNewP({...newP,onlinePrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
+                <div><label style={S.lbl}>공구가</label><input type="number" value={newP.groupBuyPrice} onChange={e=>setNewP({...newP,groupBuyPrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
+                <div><label style={S.lbl}>도매가</label><input type="number" value={newP.wholesalePrice} onChange={e=>setNewP({...newP,wholesalePrice:e.target.value})} placeholder="0" style={S.inpN}/></div>
                 <div><label style={S.lbl}>원래마진 금액 ↓자동</label><input value={newP.groupBuyPrice&&newP.wholesalePrice?fmt(npC.total):"—"} readOnly style={{...S.inpRO,textAlign:"right",color:npC.total>0?"#2D7A4F":"#AAA",fontWeight:700}}/></div>
                 <div><label style={S.lbl}>원래마진율 ↓자동</label><input value={newP.groupBuyPrice&&newP.wholesalePrice?pct(npC.totalRate):"—"} readOnly style={{...S.inpRO,textAlign:"right",color:npC.totalRate>0?"#2D7A4F":"#AAA",fontWeight:700}}/></div>
               </div>
@@ -393,15 +493,15 @@ function App(){
               </div>
             </div>
             <div style={{padding:"10px 16px",background:"#EFF6FF",borderLeft:"3px solid #93C5FD",borderBottom:"1px solid #E6DED6",fontSize:11,color:"#1E40AF",lineHeight:1.8}}>
-              💡 <b>데이터 유실 방지 안내</b> — 이 도구는 새로고침 시 입력한 내용이 초기화돼요.<br/>
-              상품 등록 후 <b>📥 엑셀 저장</b> 버튼으로 저장해두고, 다음에 열 때 <b>📤 엑셀 불러오기</b>로 다시 불러오세요!
+              💡 <b>자동저장 안내</b> — 이제 로그인 정보로 자동 저장돼서 새로고침해도 그대로예요.<br/>
+              그래도 엑셀로 따로 백업해두고 싶으면 <b>📥 엑셀 저장</b> / <b>📤 엑셀 불러오기</b>를 이용하세요.
             </div>
             <div style={{padding:"10px 16px",background:"#FFFBF0",borderLeft:"3px solid #FCD34D",borderBottom:"1px solid #E6DED6",fontSize:11,color:"#92400E",lineHeight:1.8}}>
               📝 <b>입력 예시</b> — 아래처럼 상품을 등록하면 돼요!
               <div style={{marginTop:8,overflowX:"auto"}}>
                 <table style={{borderCollapse:"collapse",fontSize:10,minWidth:700}}>
                   <thead><tr style={{background:"#1A2940",color:"#fff"}}>
-                    {["상품ID","브랜드","상품명","온라인가","희망공구가","회사도매가","원래마진금액","셀러마진%","셀러마진금액","내마진금액","비고"].map((h,i)=>(
+                    {["상품ID","브랜드","상품명","시중가","공구가","도매가","원래마진금액","셀러마진%","셀러마진금액","내마진금액","비고"].map((h,i)=>(
                       <th key={i} style={{padding:"5px 8px",textAlign:i>2?"right":"left",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
                     ))}
                   </tr></thead>
@@ -426,7 +526,7 @@ function App(){
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr style={{background:"#1A2940",color:"#fff"}}>
-                  {["상품ID","브랜드","상품명","온라인가","희망공구가","회사도매가","원래마진금액","원래마진율","셀러마진%","셀러마진금액","내마진금액","비고",""].map((h,i)=><th key={i} style={S.th(i>2)}>{h}</th>)}
+                  {["상품ID","브랜드","상품명","시중가","공구가","도매가","원래마진금액","원래마진율","셀러마진%","셀러마진금액","내마진금액","비고",""].map((h,i)=><th key={i} style={S.th(i>2)}>{h}</th>)}
                 </tr></thead>
                 <tbody>{products.map((p,i)=>{const m=calcM(p),isE=editRate[p.id]!==undefined;return(
                   <tr key={p.id} style={{background:i%2===0?"#fff":"#FAF8F5"}}>
@@ -548,7 +648,7 @@ function App(){
                     ))}
                   </div>
                   {activePoints.length>0&&(<div style={{marginBottom:18}}><div style={{fontSize:11,fontWeight:800,color:ac,marginBottom:8,paddingBottom:4,borderBottom:"1px solid #EEE5E0"}}>제품 핵심 포인트</div>{activePoints.map((pt,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:4,alignItems:"flex-start"}}><span style={{background:ac,color:"#fff",borderRadius:"50%",width:15,height:15,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,flexShrink:0,marginTop:1}}>{i+1}</span><span style={{fontSize:11,color:"#333",lineHeight:1.7}}>{pt}</span></div>)}</div>)}
-                  {selProds.length>0&&(<div style={{marginBottom:18}}><div style={{fontSize:11,fontWeight:800,color:ac,marginBottom:8,paddingBottom:4,borderBottom:"1px solid #EEE5E0"}}>공구 가격 제안표</div><table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}><thead><tr style={{background:"#1A2940",color:"#fff"}}>{["수량/구성","온라인가","희망 공구가","공급가","셀러마진"].map((h,i)=><th key={h} style={{padding:"7px 8px",textAlign:i===0?"left":"right",fontWeight:700}}>{h}</th>)}</tr></thead><tbody>{selProds.map((p,i)=>{const m=calcM(p);return(<tr key={p.id} style={{background:i%2===0?"#fff":"#FAF8F5"}}><td style={{padding:"6px 8px",borderBottom:"1px solid #F0E8E0"}}>
+                  {selProds.length>0&&(<div style={{marginBottom:18}}><div style={{fontSize:11,fontWeight:800,color:ac,marginBottom:8,paddingBottom:4,borderBottom:"1px solid #EEE5E0"}}>공구 가격 제안표</div><table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}><thead><tr style={{background:"#1A2940",color:"#fff"}}>{["수량/구성","시중가","공구가","공급가","셀러마진"].map((h,i)=><th key={h} style={{padding:"7px 8px",textAlign:i===0?"left":"right",fontWeight:700}}>{h}</th>)}</tr></thead><tbody>{selProds.map((p,i)=>{const m=calcM(p);return(<tr key={p.id} style={{background:i%2===0?"#fff":"#FAF8F5"}}><td style={{padding:"6px 8px",borderBottom:"1px solid #F0E8E0"}}>
                                   <div style={{fontWeight:600}}>{p.name.length>28?p.name.substring(0,28)+"…":p.name}</div>
                                   {p.note&&<div style={{fontSize:9,color:"#AAA",marginTop:2}}>{p.note}</div>}
                                 </td><td style={{padding:"6px 8px",textAlign:"right",borderBottom:"1px solid #F0E8E0",color:"#CCC"}}>{fmt(p.onlinePrice)}</td><td style={{padding:"6px 8px",textAlign:"right",borderBottom:"1px solid #F0E8E0",fontWeight:700,color:ac}}>{fmt(p.groupBuyPrice)}</td><td style={{padding:"6px 8px",textAlign:"right",borderBottom:"1px solid #F0E8E0"}}>{fmt(m.supplyPrice)}</td><td style={{padding:"6px 8px",textAlign:"right",borderBottom:"1px solid #F0E8E0",color:"#2D7A4F",fontWeight:700}}>{fmt(m.sellerAmt)}</td></tr>);})}</tbody></table></div>)}
@@ -656,7 +756,7 @@ function App(){
             </div>
             <div style={{padding:"0 16px 16px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 120px 1fr",gap:10}}>
               <div>
-                <label style={S.lbl}>온라인 가격 (참고용)</label>
+                <label style={S.lbl}>시중가 (참고용)</label>
                 <input type="number" value={optBase.onlinePrice} onChange={e=>setOptBase({...optBase,onlinePrice:e.target.value})} placeholder="예: 24000" style={S.inpN}/>
               </div>
               <div>
@@ -695,8 +795,9 @@ function App(){
               <span>📋 옵션별 계산 (최대 11개)</span>
               <span style={{fontSize:10,color:"#BBB",fontWeight:400}}>옵션명 + 옵션가 + 수익금만 입력 → 나머지 자동계산</span>
             </div>
-            <div style={{padding:"8px 16px",background:"#FFF7ED",borderBottom:"1px solid #FCD34D",fontSize:11,color:"#92400E",display:"flex",alignItems:"center",gap:6}}>
-              ⚠️ <span><b>옵션명 · 온라인가 · +옵션가 · +수익금</b> 모두 입력해야 체크박스가 활성화돼요. 입력 완료 후 체크하세요!</span>
+            <div style={{padding:"8px 16px",background:"#FFF7ED",borderBottom:"1px solid #FCD34D",fontSize:11,color:"#92400E",lineHeight:1.8}}>
+              ⚠️ <span><b>옵션명 · 시중가 · +옵션가 · +수익금</b> 모두 입력해야 체크박스가 활성화돼요. 입력 완료 후 체크하세요!</span><br/>
+              <span>시중가는 자동으로 바뀌지 않아요. (네이버 검색 → 해당 구성 또는 비슷한 구성을 찾아 최저가를 별도로 입력하세요)</span>
             </div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -704,7 +805,7 @@ function App(){
                   <tr style={{background:"#1A2940",color:"#fff"}}>
                     <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,width:36,textAlign:"center"}}>선택</th>
                     <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"left",minWidth:140}}>옵션명</th>
-                    <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"right",whiteSpace:"nowrap"}}>온라인가<br/><span style={{fontSize:9,fontWeight:400,opacity:.7}}>(그대로 노출)</span></th>
+                    <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"right",whiteSpace:"nowrap"}}>시중가<br/><span style={{fontSize:9,fontWeight:400,opacity:.7}}>(그대로 노출)</span></th>
                     <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"right",whiteSpace:"nowrap"}}>+옵션가<br/><span style={{fontSize:9,fontWeight:400,opacity:.7}}>(기본공구가에 추가)</span></th>
                     <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"right",whiteSpace:"nowrap"}}>+수익금<br/><span style={{fontSize:9,fontWeight:400,opacity:.7}}>(기본마진에 추가)</span></th>
                     <th style={{padding:"9px 10px",fontSize:10,fontWeight:700,textAlign:"right",whiteSpace:"nowrap",background:"#2A3A50"}}>옵션 공구가</th>
@@ -898,7 +999,7 @@ function App(){
               </div>
             </div>
             <div style={{padding:"8px 16px",background:"#EFF6FF",borderBottom:"1px solid #E6DED6",fontSize:11,color:"#1E40AF"}}>
-              💡 새로고침 시 데이터가 초기화돼요. 작업 후 반드시 <b>📥 저장</b> 버튼으로 엑셀 저장해두세요!
+              💡 이제 자동 저장돼서 새로고침해도 그대로예요. 엑셀 백업은 선택사항이에요.
             </div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -971,7 +1072,7 @@ function App(){
           <div style={{...S.card,overflow:"hidden"}}>
             <div style={{...S.cH(),borderRadius:"12px 12px 0 0"}}>
               <span>📄 사용설명서</span>
-              <a href="manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
+              <a href="manual.pdf" download="5분자동화도구_ver4_사용설명서.pdf"
                 style={{padding:"7px 18px",background:ac,color:"#fff",borderRadius:7,fontSize:12,fontWeight:700,textDecoration:"none",display:"inline-block"}}>
                 ⬇️ PDF 다운로드
               </a>
@@ -979,7 +1080,7 @@ function App(){
             <div style={{padding:"28px 24px",background:"#F9F7F5",display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
               <div style={{textAlign:"center"}}>
                 <div style={{fontSize:34,marginBottom:8}}>📄</div>
-                <div style={{fontWeight:800,color:"#1A2940",fontSize:15,marginBottom:6}}>5분자동화 올인원 ver3. 사용설명서</div>
+                <div style={{fontWeight:800,color:"#1A2940",fontSize:15,marginBottom:6}}>5분자동화 올인원 ver4. 사용설명서</div>
                 <div style={{fontSize:12,color:"#AAA"}}>총 5페이지 · 전체 기능 안내 · 셀러 관리 포함</div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",maxWidth:520}}>
@@ -997,7 +1098,7 @@ function App(){
                   </div>
                 ))}
               </div>
-              <a href="manual.pdf" download="5분자동화도구_ver3_사용설명서.pdf"
+              <a href="manual.pdf" download="5분자동화도구_ver4_사용설명서.pdf"
                 style={{padding:"13px 44px",background:ac,color:"#fff",borderRadius:9,fontSize:14,fontWeight:800,textDecoration:"none",display:"inline-block",marginTop:6}}>
                 ⬇️ 사용설명서 PDF 다운로드
               </a>
@@ -1021,9 +1122,9 @@ function App(){
                 <div><label style={S.lbl}>상품명</label><input value={editRow.name} onChange={e=>setEditRow({...editRow,name:e.target.value})} style={S.inp}/></div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
-                <div><label style={S.lbl}>온라인 가격</label><input type="number" value={editRow.onlinePrice} onChange={e=>setEditRow({...editRow,onlinePrice:e.target.value})} style={S.inpN}/></div>
-                <div><label style={S.lbl}>희망 공구가</label><input type="number" value={editRow.groupBuyPrice} onChange={e=>setEditRow({...editRow,groupBuyPrice:e.target.value})} style={S.inpN}/></div>
-                <div><label style={S.lbl}>회사 도매가</label><input type="number" value={editRow.wholesalePrice} onChange={e=>setEditRow({...editRow,wholesalePrice:e.target.value})} style={S.inpN}/></div>
+                <div><label style={S.lbl}>시중가</label><input type="number" value={editRow.onlinePrice} onChange={e=>setEditRow({...editRow,onlinePrice:e.target.value})} style={S.inpN}/></div>
+                <div><label style={S.lbl}>공구가</label><input type="number" value={editRow.groupBuyPrice} onChange={e=>setEditRow({...editRow,groupBuyPrice:e.target.value})} style={S.inpN}/></div>
+                <div><label style={S.lbl}>도매가</label><input type="number" value={editRow.wholesalePrice} onChange={e=>setEditRow({...editRow,wholesalePrice:e.target.value})} style={S.inpN}/></div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"100px 1fr",gap:10,marginBottom:20}}>
                 <div><label style={S.lbl}>셀러마진 %</label><input type="number" min="0" max="100" value={editRow.sellerMarginRate} onChange={e=>setEditRow({...editRow,sellerMarginRate:e.target.value})} style={S.inpN}/></div>
