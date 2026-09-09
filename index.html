@@ -368,9 +368,9 @@ function App(){
           id:r["상품ID"]||`P${String(i+1).padStart(3,"0")}`,
           brand:r["브랜드명"]||"",
           name:r["상품명"]||"",
-          onlinePrice:+r["시중가"]||0,
-          groupBuyPrice:+r["공구가"]||0,
-          wholesalePrice:+r["도매가"]||0,
+          onlinePrice:+(r["시중가"]??r["온라인가격"])||0,
+          groupBuyPrice:+(r["공구가"]??r["희망공구가"])||0,
+          wholesalePrice:+(r["도매가"]??r["회사도매가"])||0,
           sellerMarginRate:+r["셀러마진%"]||75,
           note:r["비고"]||""
         }));
