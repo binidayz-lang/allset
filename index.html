@@ -477,7 +477,10 @@ function App(){
                 <div><label style={S.lbl}>셀러마진 %</label><div style={{position:"relative"}}><input type="number" min="0" max="100" value={newP.sellerMarginRate} onChange={e=>setNewP({...newP,sellerMarginRate:e.target.value})} style={{...S.inpN,paddingRight:20}}/><span style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",fontSize:11,color:"#BBB",pointerEvents:"none"}}>%</span></div></div>
                 <div><label style={S.lbl}>셀러마진 금액 ↓자동</label><input value={newP.groupBuyPrice&&newP.wholesalePrice?fmt(npC.sellerAmt):"—"} readOnly style={{...S.inpRO,textAlign:"right",color:"#C4375A",fontWeight:700}}/></div>
                 <div><label style={S.lbl}>내 마진 금액 ↓자동</label><input value={newP.groupBuyPrice&&newP.wholesalePrice?fmt(npC.myAmt):"—"} readOnly style={{...S.inpRO,textAlign:"right",color:"#1A6B3A",fontWeight:700}}/></div>
-                <div><label style={S.lbl}>비고</label><input value={newP.note} onChange={e=>setNewP({...newP,note:e.target.value})} placeholder="예: 세트, 단품, 색상" style={S.inp}/></div>
+                <div><label style={S.lbl}>비고</label><input value={newP.note} onChange={e=>setNewP({...newP,note:e.target.value})} placeholder="세트구성 자세히, 색상 구성 자세히, 단품일 땐 제외" style={S.inp}/></div>
+              </div>
+              <div style={{padding:"9px 13px",background:"#EFF6FF",border:"1px solid #CFE3FB",borderRadius:6,fontSize:11,color:"#1E40AF",lineHeight:1.7,marginBottom:14}}>
+                💡 <b>비고 작성 예시</b> — 구성 : 혼합육수 야채1팩✢멸치1팩✢사골1팩 · 색상 : 핑크, 아이보리, 블랙 중 선택 1
               </div>
               <button onClick={addProduct} style={{...S.bP("auto"),padding:"10px 26px"}}>상품 추가하기</button>
             </div>
@@ -517,7 +520,7 @@ function App(){
                       <td style={{padding:"5px 8px",textAlign:"right"}}>75.0%</td>
                       <td style={{padding:"5px 8px",textAlign:"right",color:"#C4375A",fontWeight:700}}>5,250원</td>
                       <td style={{padding:"5px 8px",textAlign:"right",color:"#1A6B3A",fontWeight:700}}>1,750원</td>
-                      <td style={{padding:"5px 8px",color:"#999"}}>세트</td>
+                      <td style={{padding:"5px 8px",color:"#999"}}>세트구성 자세히</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1128,7 +1131,7 @@ function App(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:"100px 1fr",gap:10,marginBottom:20}}>
                 <div><label style={S.lbl}>셀러마진 %</label><input type="number" min="0" max="100" value={editRow.sellerMarginRate} onChange={e=>setEditRow({...editRow,sellerMarginRate:e.target.value})} style={S.inpN}/></div>
-                <div><label style={S.lbl}>비고</label><input value={editRow.note} onChange={e=>setEditRow({...editRow,note:e.target.value})} placeholder="예: 세트, 단품, 색상" style={S.inp}/></div>
+                <div><label style={S.lbl}>비고</label><input value={editRow.note} onChange={e=>setEditRow({...editRow,note:e.target.value})} placeholder="세트구성 자세히, 색상 구성 자세히, 단품일 땐 제외" style={S.inp}/></div>
               </div>
               <div style={{display:"flex",gap:10}}>
                 <button onClick={saveEdit} style={{...S.bP(),flex:1,fontSize:13}}>✅ 저장</button>
