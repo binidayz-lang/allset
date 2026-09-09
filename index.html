@@ -436,7 +436,7 @@ function App(){
           <div style={{fontSize:11,opacity:.6,marginTop:1}}>인플즈메리 강사 수강생 전용</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <button onClick={()=>setTab("manual")} style={{background:tab==="manual"?ac:"rgba(255,255,255,.12)",border:"none",color:"#fff",borderRadius:6,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>❓ 가이드</button>
+          <button onClick={()=>setTab("manual")} style={{background:tab==="manual"?ac:"#fff",border:"none",color:tab==="manual"?"#fff":ac,borderRadius:6,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>❓ 가이드</button>
           <span style={{fontSize:11,opacity:.75}}>{loginName}님</span>
           <button onClick={doLogout} style={{background:"rgba(255,255,255,.12)",border:"none",color:"#fff",borderRadius:6,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>로그아웃</button>
         </div>
